@@ -1,25 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>API Documentation</title>
-    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@3/swagger-ui.css">
+    <title>API Docs</title>
+    <link href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css" rel="stylesheet">
 </head>
 <body>
     <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
-    <script src="https://unpkg.com/swagger-ui-dist@3/swagger-ui-standalone-preset.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
     <script>
-        window.onload = function() {
-            window.ui = SwaggerUIBundle({
-                url: "openapi.json",
-                dom_id: '#swagger-ui',
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                layout: "StandaloneLayout"
-            })
-        }
+    window.onload = () => {
+        // Load your OpenAPI spec
+        fetch('openapi.json')
+            .then(response => response.json())
+            .then(spec => {
+                // Fix FastAPI-specific issues
+                spec.servers = [{ url: '/', description: 'Local' }];
+                
+                window.ui = SwaggerUIBundle({
+                    spec: spec,  // Use the modified spec directly
+                    dom_id: '#swagger-ui',
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                    ],
+                    layout: "BaseLayout"
+                });
+            });
+    };
     </script>
 </body>
 </html>

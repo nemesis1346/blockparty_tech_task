@@ -20,8 +20,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      - name: Generate OpenAPI spec
-        run: python generate_openapi.py
+          - name: Generate OpenAPI spec
+          run: |
+            python -c "
+            from fastapi import FastAPI
+            from api.main import app
+            import json
+            spec = app.openapi()
+            # Fix for GitHub Pages
+            spec['servers'] = [{'url': '/', 'description': 'GitHub Pages'}]
+            with open('openapi.json', 'w') as f:
+                json.dump(spec, f)
+            "
           
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
