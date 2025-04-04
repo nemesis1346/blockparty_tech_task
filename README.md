@@ -7,11 +7,8 @@
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install dependencies
-pip install fastapi uvicorn pytest httpx
-
 # 3. Generate requirements.txt
-pip freeze > requirements.txt
+pip install -r requirements.txt
 
 
 #Running the project:

@@ -1,65 +1,37 @@
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
-from .mock_data import MOCK_TRANSACTIONS
-from typing import List, Dict
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from . import crud, models, schemas
+from .database import SessionLocal, engine
 
-app = FastAPI(
-    title="Transaction Mock API",
-    description="API for mock blockchain transactions",
-    version="1.0.0",
-    openapi_tags=[{
-        "name": "Transactions",
-        "description": "Endpoints for transaction data"
-    }]
-)
+# Create tables
+models.Base.metadata.create_all(bind=engine)
 
-@app.get("/transactions", 
-         response_model=List[Dict],
-         tags=["Transactions"],
-         summary="Get all transactions")
-async def get_all_transactions():
-    """Retrieve complete transaction history"""
-    return MOCK_TRANSACTIONS
+app = FastAPI()
 
-@app.get("/transactions/{tx_hash}",
-         response_model=Dict,
-         tags=["Transactions"],
-         summary="Get transaction by hash",
-         responses={
-             404: {"description": "Transaction not found"},
-             422: {"description": "Invalid hash format"}
-         })
-async def get_transaction(tx_hash: str):
-    """Retrieve specific transaction by its hash
-    
-    - **tx_hash**: Transaction hash starting with 0x
-    """
-    if not tx_hash.startswith('0x'):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Transaction hash must start with 0x"
-        )
-    
-    transaction = next(
-        (tx for tx in MOCK_TRANSACTIONS if tx["tx_hash"] == tx_hash), 
-        None
-    )
-    
-    if not transaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Transaction {tx_hash} not found"
-        )
-    
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.post("/transactions/", response_model=schemas.Transaction)
+def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
+    db_transaction = crud.get_transaction(db, tx_hash=transaction.tx_hash)
+    if db_transaction:
+        raise HTTPException(status_code=400, detail="Transaction already exists")
+    return crud.create_transaction(db=db, transaction=transaction)
+
+@app.get("/transactions/", response_model=list[schemas.Transaction])
+def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    transactions_result = crud.get_transactions(db, skip=skip, limit=limit)
+    print(f"Retrieved {len(transactions_result)} transactions from the database.")
+    return transactions_result
+
+@app.get("/transactions/{tx_hash}", response_model=schemas.Transaction)
+def read_transaction(tx_hash: str, db: Session = Depends(get_db)):
+    transaction = crud.get_transaction(db, tx_hash=tx_hash)
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
     return transaction
-
-@app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": exc.detail,
-            "status_code": exc.status_code,
-            "success": False
-        }
-    )
