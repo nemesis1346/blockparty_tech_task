@@ -7,6 +7,11 @@ Moreover I decided to add Swagger UI for testing the API, so is more intuitive f
 ## Setup:
 
 #### 1. Create and activate virtual environment (Mac/Linux)
+
+Prerequisites:
+- python3
+- venv
+
 ```
 # python version: 3.9.6
 
